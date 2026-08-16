@@ -1,2 +1,6 @@
 .env
 .env example  
+echo node_modules/ > .gitignore
+echo .env >> .gitignore
+echo src/uploads/profiles/* >> .gitignore
+echo !src/uploads/profiles/.gitkeep >> .gitignore
