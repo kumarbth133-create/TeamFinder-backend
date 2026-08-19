@@ -20,7 +20,7 @@ const sampleMentors = [
     sessionsCompleted: 42,
   },
   {
-    name: "Kundan Gupta",
+    name: "Ankur Gill",
     email: "kumarbth133@gmail.com",
     title: "Lead AI/ML Engineer",
     company: "Microsoft",
@@ -35,7 +35,7 @@ const sampleMentors = [
     sessionsCompleted: 31,
   },
   {
-    name: "Gaurabh Nagpal",
+    name: "Kundan Gupta",
     email: "priya.s@example.com",
     title: "UI/UX & Frontend Lead",
     company: "Design Studio",

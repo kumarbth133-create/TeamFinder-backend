@@ -14,7 +14,7 @@ connectDB();
 const app = express();
 
 // Middleware
-app.use(cors({ origin: "team-finder-backend.vercel.app", credentials: true }));
+app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -35,6 +35,7 @@ app.use("/api/notifications", require("./src/routes/notificationRoutes"));
 app.use("/api/admin", require("./src/routes/adminRoutes"));
 app.use("/api/mentors", require("./src/routes/mentorRoutes"));
 app.use("/api/courses", require("./src/routes/courseRoutes"));
+app.use("/api/ai", require("./src/routes/aiRoutes"));
 
 // Health check route
 app.get("/", (req, res) => {

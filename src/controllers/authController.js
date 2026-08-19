@@ -166,10 +166,49 @@ const getMe = asyncHandler(async (req, res) => {
   });
 });
 
+// @desc    Get public stats (student, project, & skill counts)
+// @route   GET /api/auth/stats
+// @access  Public
+const getPublicStats = asyncHandler(async (req, res) => {
+  const Project = require("../models/Project");
+  const JoinRequest = require("../models/JoinRequest");
+
+  const totalStudents = await User.countDocuments({ role: "student" });
+  const totalProjects = await Project.countDocuments();
+  
+  // Calculate total skills matched/listed across users and projects
+  const users = await User.find({ role: "student" }).select("skills");
+  let totalSkillsMatched = 0;
+  users.forEach((u) => {
+    if (u.skills && Array.isArray(u.skills)) {
+      totalSkillsMatched += u.skills.length;
+    }
+  });
+
+  const totalAcceptedRequests = await JoinRequest.countDocuments({ status: "accepted" });
+  const totalRequests = await JoinRequest.countDocuments();
+  
+  // Calculate dynamic evaluation accuracy
+  const evaluationAccuracy = totalRequests > 0
+    ? Math.round((totalAcceptedRequests / totalRequests) * 100)
+    : 100;
+
+  res.json({
+    success: true,
+    data: {
+      totalStudents,
+      totalProjects,
+      totalSkillsMatched,
+      evaluationAccuracy,
+    },
+  });
+});
+
 module.exports = {
   registerUser,
   loginUser,
   forgotPassword,
   resetPassword,
   getMe,
+  getPublicStats,
 };
