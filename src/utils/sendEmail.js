@@ -126,7 +126,7 @@ const buildDirectEmailLinks = ({
   topic,
   message,
   actionToken,
-  clientUrl = "http://localhost:5174",
+  clientUrl = process.env.CLIENT_URL || "https://team-finder-backend.vercel.app",
 }) => {
   const acceptUrl = `${clientUrl}/mentor-request/action?token=${actionToken}&action=accept`;
   const rejectUrl = `${clientUrl}/mentor-request/action?token=${actionToken}&action=reject`;
@@ -187,7 +187,7 @@ const generateMentorRequestEmail = ({
   topic,
   message,
   actionToken,
-  clientUrl = "http://localhost:5174",
+  clientUrl = process.env.CLIENT_URL || "https://team-finder-backend.vercel.app",
 }) => {
   const acceptUrl = `${clientUrl}/mentor-request/action?token=${actionToken}&action=accept`;
   const rejectUrl = `${clientUrl}/mentor-request/action?token=${actionToken}&action=reject`;
