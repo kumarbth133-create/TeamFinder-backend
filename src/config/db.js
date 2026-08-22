@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
-const { MongoMemoryServer } = require("mongodb-memory-server");
 
+let isConnected = false;
 let mongoServer;
 
 const seedDefaultData = async () => {
@@ -35,32 +35,41 @@ const seedDefaultData = async () => {
 };
 
 const connectDB = async () => {
+  if (mongoose.connection.readyState >= 1) {
+    return;
+  }
+
   const uri = process.env.MONGO_URI;
 
   try {
     if (!uri) throw new Error("No MONGO_URI specified in environment");
     const conn = await mongoose.connect(uri, {
-      serverSelectionTimeoutMS: 2000,
+      serverSelectionTimeoutMS: 5000,
     });
+    isConnected = true;
     console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
     await seedDefaultData();
   } catch (error) {
     console.warn(`⚠️ Primary MongoDB connection failed (${error.message}).`);
-    console.log(`🚀 Launching Automated In-Memory MongoDB Server...`);
 
-    try {
-      mongoServer = await MongoMemoryServer.create();
-      const mongoUri = mongoServer.getUri();
-      const conn = await mongoose.connect(mongoUri);
-      console.log(`✅ Automated MongoDB Connected: ${conn.connection.host}`);
-      await seedDefaultData();
-    } catch (memErr) {
-      console.error(`❌ Failed to launch Database: ${memErr.message}`);
-      process.exit(1);
+    // In local development only: fallback to in-memory mongodb
+    if (!process.env.VERCEL && process.env.NODE_ENV !== "production") {
+      try {
+        console.log(`🚀 Launching Automated In-Memory MongoDB Server...`);
+        const { MongoMemoryServer } = require("mongodb-memory-server");
+        mongoServer = await MongoMemoryServer.create();
+        const mongoUri = mongoServer.getUri();
+        const conn = await mongoose.connect(mongoUri);
+        isConnected = true;
+        console.log(`✅ Automated MongoDB Connected: ${conn.connection.host}`);
+        await seedDefaultData();
+      } catch (memErr) {
+        console.error(`❌ Failed to launch In-Memory Database: ${memErr.message}`);
+      }
+    } else {
+      console.error(`❌ MongoDB Connection Error on Vercel: Please set MONGO_URI in Vercel Environment Variables!`);
     }
   }
 };
 
 module.exports = connectDB;
-
-
