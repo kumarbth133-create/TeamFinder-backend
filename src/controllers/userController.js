@@ -57,6 +57,8 @@ const getStudentById = asyncHandler(async (req, res) => {
 // @route   PUT /api/users/profile
 // @access  Private
 const updateProfile = asyncHandler(async (req, res) => {
+  const User = require("../models/User");
+  const Mentor = require("../models/Mentor");
   const user = await User.findById(req.user._id);
 
   if (!user) {
@@ -64,10 +66,15 @@ const updateProfile = asyncHandler(async (req, res) => {
     throw new Error("User not found");
   }
 
-  // Parse skills if sent as string
+  // Parse skills / expertise if sent as string
   let skills = req.body.skills;
   if (typeof skills === "string") {
     skills = skills.split(",").map((s) => s.trim()).filter(Boolean);
+  }
+
+  let expertise = req.body.expertise;
+  if (typeof expertise === "string") {
+    expertise = expertise.split(",").map((s) => s.trim()).filter(Boolean);
   }
 
   // Update fields
@@ -77,6 +84,11 @@ const updateProfile = asyncHandler(async (req, res) => {
   user.githubLink = req.body.githubLink !== undefined ? req.body.githubLink : user.githubLink;
   user.linkedinLink = req.body.linkedinLink !== undefined ? req.body.linkedinLink : user.linkedinLink;
   user.college = req.body.college !== undefined ? req.body.college : user.college;
+  user.title = req.body.title !== undefined ? req.body.title : user.title;
+  user.company = req.body.company !== undefined ? req.body.company : user.company;
+  user.experience = req.body.experience !== undefined ? req.body.experience : user.experience;
+  if (expertise) user.expertise = expertise;
+
   if (req.body.profilePicture !== undefined) {
     user.profilePicture = req.body.profilePicture;
   }
@@ -92,6 +104,29 @@ const updateProfile = asyncHandler(async (req, res) => {
 
   const updatedUser = await user.save();
 
+  // If mentor, sync with Mentor collection
+  if (updatedUser.role === "mentor") {
+    try {
+      await Mentor.findOneAndUpdate(
+        { email: updatedUser.email },
+        {
+          name: updatedUser.name,
+          title: updatedUser.title || "Industry Mentor",
+          company: updatedUser.company || "Independent Expert",
+          experience: updatedUser.experience || "5+ Years",
+          expertise: updatedUser.expertise?.length ? updatedUser.expertise : updatedUser.skills,
+          bio: updatedUser.bio,
+          githubLink: updatedUser.githubLink,
+          linkedinLink: updatedUser.linkedinLink,
+          profilePicture: updatedUser.profilePicture,
+        },
+        { upsert: true, new: true }
+      );
+    } catch (err) {
+      console.warn("Failed to sync updated mentor record:", err.message);
+    }
+  }
+
   res.json({
     success: true,
     message: "Profile updated successfully",
@@ -101,6 +136,10 @@ const updateProfile = asyncHandler(async (req, res) => {
       email: updatedUser.email,
       role: updatedUser.role,
       college: updatedUser.college,
+      title: updatedUser.title,
+      company: updatedUser.company,
+      experience: updatedUser.experience,
+      expertise: updatedUser.expertise,
       profilePicture: updatedUser.profilePicture,
       bio: updatedUser.bio,
       skills: updatedUser.skills,

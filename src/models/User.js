@@ -24,8 +24,28 @@ const userSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ["student", "admin"],
+      enum: ["student", "mentor", "admin"],
       default: "student",
+    },
+    title: {
+      type: String,
+      default: "",
+    },
+    company: {
+      type: String,
+      default: "",
+    },
+    experience: {
+      type: String,
+      default: "3+ Years",
+    },
+    expertise: {
+      type: [String],
+      default: [],
+    },
+    availability: {
+      type: String,
+      default: "Available for Guidance",
     },
     profilePicture: {
       type: String,

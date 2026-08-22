@@ -11,6 +11,10 @@ const notificationSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
     },
+    title: {
+      type: String,
+      default: "",
+    },
     type: {
       type: String,
       enum: [
@@ -19,6 +23,10 @@ const notificationSchema = new mongoose.Schema(
         "join_request_rejected",
         "join_request_cancelled",
         "project_update",
+        "mentor_request_sent",
+        "mentor_request_accepted",
+        "mentor_request_rejected",
+        "system",
       ],
       required: true,
     },
@@ -29,6 +37,14 @@ const notificationSchema = new mongoose.Schema(
     project: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Project",
+    },
+    mentor: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Mentor",
+    },
+    mentorRequest: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "MentorRequest",
     },
     isRead: {
       type: Boolean,

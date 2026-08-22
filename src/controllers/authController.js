@@ -49,7 +49,103 @@ const registerUser = asyncHandler(async (req, res) => {
   }
 });
 
-// @desc    Login user
+// @desc    Register new mentor
+// @route   POST /api/auth/register-mentor
+// @access  Public
+const registerMentor = asyncHandler(async (req, res) => {
+  const Mentor = require("../models/Mentor");
+  const {
+    name,
+    email,
+    password,
+    title,
+    company,
+    experience,
+    expertise,
+    bio,
+    linkedinLink,
+    githubLink,
+    profilePicture,
+  } = req.body;
+
+  if (!name || !email || !password) {
+    res.status(400);
+    throw new Error("Please provide name, email and password");
+  }
+
+  const userExists = await User.findOne({ email: email.toLowerCase() });
+  if (userExists) {
+    res.status(400);
+    throw new Error("User with this email already exists");
+  }
+
+  const expertiseArray = Array.isArray(expertise)
+    ? expertise
+    : typeof expertise === "string"
+    ? expertise.split(",").map((s) => s.trim()).filter(Boolean)
+    : ["Technical Guidance", "Code Review"];
+
+  // 1. Create User with role mentor
+  const user = await User.create({
+    name,
+    email: email.toLowerCase(),
+    password,
+    role: "mentor",
+    title: title || "Industry Mentor",
+    company: company || "Independent Expert",
+    experience: experience || "5+ Years",
+    expertise: expertiseArray,
+    bio: bio || "Passionate about mentoring next-gen developers and student project teams.",
+    linkedinLink: linkedinLink || "",
+    githubLink: githubLink || "",
+    profilePicture: profilePicture || "",
+  });
+
+  // 2. Also create/sync public Mentor listing
+  try {
+    await Mentor.findOneAndUpdate(
+      { email: email.toLowerCase() },
+      {
+        name,
+        email: email.toLowerCase(),
+        title: title || "Industry Mentor",
+        company: company || "Independent Expert",
+        experience: experience || "5+ Years",
+        expertise: expertiseArray,
+        bio: bio || "Passionate about mentoring next-gen developers and student project teams.",
+        linkedinLink: linkedinLink || "",
+        githubLink: githubLink || "",
+        profilePicture: profilePicture || "",
+        isActive: true,
+      },
+      { upsert: true, new: true }
+    );
+  } catch (err) {
+    console.warn("Failed to sync Mentor record:", err.message);
+  }
+
+  res.status(201).json({
+    success: true,
+    message: "Mentor registration successful! Welcome to TeamUp.",
+    data: {
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      title: user.title,
+      company: user.company,
+      experience: user.experience,
+      expertise: user.expertise,
+      bio: user.bio,
+      linkedinLink: user.linkedinLink,
+      githubLink: user.githubLink,
+      profilePicture: user.profilePicture,
+      token: generateToken(user._id),
+    },
+  });
+});
+
+// @desc    Login user (Student, Mentor, Admin)
 // @route   POST /api/auth/login
 // @access  Public
 const loginUser = asyncHandler(async (req, res) => {
@@ -62,7 +158,28 @@ const loginUser = asyncHandler(async (req, res) => {
   }
 
   // Find user with password field included
-  const user = await User.findOne({ email }).select("+password");
+  let user = await User.findOne({ email: email.toLowerCase() }).select("+password");
+
+  // If not found in User collection, check if email exists in Mentor seed collection
+  if (!user) {
+    const Mentor = require("../models/Mentor");
+    const mentorRecord = await Mentor.findOne({ email: email.toLowerCase() });
+    if (mentorRecord) {
+      // Auto-create User entry for this mentor so they can log in seamlessly
+      user = await User.create({
+        name: mentorRecord.name,
+        email: mentorRecord.email.toLowerCase(),
+        password: password, // set password as entered
+        role: "mentor",
+        title: mentorRecord.title,
+        company: mentorRecord.company,
+        experience: mentorRecord.experience,
+        expertise: mentorRecord.expertise,
+        bio: mentorRecord.bio,
+        profilePicture: mentorRecord.profilePicture,
+      });
+    }
+  }
 
   if (!user) {
     res.status(401);
@@ -90,6 +207,10 @@ const loginUser = asyncHandler(async (req, res) => {
       email: user.email,
       role: user.role,
       college: user.college,
+      title: user.title,
+      company: user.company,
+      experience: user.experience,
+      expertise: user.expertise,
       profilePicture: user.profilePicture,
       bio: user.bio,
       skills: user.skills,
@@ -206,6 +327,7 @@ const getPublicStats = asyncHandler(async (req, res) => {
 
 module.exports = {
   registerUser,
+  registerMentor,
   loginUser,
   forgotPassword,
   resetPassword,

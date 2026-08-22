@@ -7,6 +7,7 @@ const Notification = require("../models/Notification");
 const getNotifications = asyncHandler(async (req, res) => {
   const notifications = await Notification.find({ recipient: req.user._id })
     .populate("sender", "name profilePicture")
+    .populate("mentor", "name title company profilePicture email")
     .populate("project", "title")
     .sort({ createdAt: -1 });
 
