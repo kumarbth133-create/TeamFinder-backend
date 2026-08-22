@@ -39,7 +39,9 @@ const connectDB = async () => {
     return;
   }
 
-  const uri = process.env.MONGO_URI;
+  const uri =
+    process.env.MONGO_URI ||
+    "mongodb+srv://kumarbth133_db_user:p%40ssw0rd%279%27%21@cluster0.kgyowjt.mongodb.net/teamfinder?retryWrites=true&w=majority&appName=Cluster0";
 
   try {
     if (!uri) throw new Error("No MONGO_URI specified in environment");
