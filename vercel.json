@@ -13,7 +13,7 @@
     }
   ],
   "env": {
-    "MONGO_URI": "mongodb+srv://kumarbth133_db_user:p%40ssw0rd%279%27%21@cluster0.kgyowjt.mongodb.net/teamfinder?retryWrites=true&w=majority&appName=Cluster0",
+    "MONGO_URI": "mongodb+srv://kumarbth133_db_user:alEEWUYPZsQ4Saxa@teamup.0wgc1zm.mongodb.net/teamfinder?retryWrites=true&w=majority&appName=Teamup",
     "JWT_SECRET": "teamup_super_secret_jwt_key_2024",
     "JWT_EXPIRE": "7d",
     "NODE_ENV": "production",

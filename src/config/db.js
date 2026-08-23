@@ -41,7 +41,7 @@ const connectDB = async () => {
 
   const uri =
     process.env.MONGO_URI ||
-    "mongodb+srv://kumarbth133_db_user:p%40ssw0rd%279%27%21@cluster0.kgyowjt.mongodb.net/teamfinder?retryWrites=true&w=majority&appName=Cluster0";
+    "mongodb+srv://kumarbth133_db_user:alEEWUYPZsQ4Saxa@teamup.0wgc1zm.mongodb.net/teamfinder?retryWrites=true&w=majority&appName=Teamup";
 
   try {
     if (!uri) throw new Error("No MONGO_URI specified in environment");
