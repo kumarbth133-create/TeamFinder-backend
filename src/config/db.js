@@ -1,7 +1,10 @@
 const mongoose = require("mongoose");
 
-let isConnected = false;
-let mongoServer;
+let cached = global.mongoose;
+
+if (!cached) {
+  cached = global.mongoose = { conn: null, promise: null };
+}
 
 const seedDefaultData = async () => {
   try {
@@ -35,43 +38,37 @@ const seedDefaultData = async () => {
 };
 
 const connectDB = async () => {
-  if (mongoose.connection.readyState >= 1) {
-    return;
+  if (cached.conn && mongoose.connection.readyState === 1) {
+    return cached.conn;
   }
 
-  const uri =
-    process.env.MONGO_URI ||
-    "mongodb+srv://kumarbth133_db_user:alEEWUYPZsQ4Saxa@teamup.0wgc1zm.mongodb.net/teamfinder?retryWrites=true&w=majority&appName=Teamup";
+  if (!cached.promise) {
+    const uri =
+      process.env.MONGO_URI ||
+      "mongodb+srv://kumarbth133_db_user:alEEWUYPZsQ4Saxa@teamup.0wgc1zm.mongodb.net/teamfinder?retryWrites=true&w=majority&appName=Teamup";
+
+    const opts = {
+      bufferCommands: false,
+      serverSelectionTimeoutMS: 8000,
+    };
+
+    cached.promise = mongoose.connect(uri, opts).then(async (mongooseInstance) => {
+      console.log(`✅ MongoDB Connected: ${mongooseInstance.connection.host}`);
+      await seedDefaultData();
+      return mongooseInstance;
+    });
+  }
 
   try {
-    if (!uri) throw new Error("No MONGO_URI specified in environment");
-    const conn = await mongoose.connect(uri, {
-      serverSelectionTimeoutMS: 5000,
-    });
-    isConnected = true;
-    console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
-    await seedDefaultData();
+    cached.conn = await cached.promise;
   } catch (error) {
-    console.warn(`⚠️ Primary MongoDB connection failed (${error.message}).`);
-
-    // In local development only: fallback to in-memory mongodb
-    if (!process.env.VERCEL && process.env.NODE_ENV !== "production") {
-      try {
-        console.log(`🚀 Launching Automated In-Memory MongoDB Server...`);
-        const { MongoMemoryServer } = require("mongodb-memory-server");
-        mongoServer = await MongoMemoryServer.create();
-        const mongoUri = mongoServer.getUri();
-        const conn = await mongoose.connect(mongoUri);
-        isConnected = true;
-        console.log(`✅ Automated MongoDB Connected: ${conn.connection.host}`);
-        await seedDefaultData();
-      } catch (memErr) {
-        console.error(`❌ Failed to launch In-Memory Database: ${memErr.message}`);
-      }
-    } else {
-      console.error(`❌ MongoDB Connection Error on Vercel: Please set MONGO_URI in Vercel Environment Variables!`);
-    }
+    cached.promise = null;
+    cached.conn = null;
+    console.error(`❌ MongoDB Connection Error: ${error.message}`);
+    throw error;
   }
+
+  return cached.conn;
 };
 
 module.exports = connectDB;

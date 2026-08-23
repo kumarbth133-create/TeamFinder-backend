@@ -19,10 +19,14 @@ app.use(express.urlencoded({ extended: true }));
 app.use(async (req, res, next) => {
   try {
     await connectDB();
+    next();
   } catch (err) {
     console.error("DB connection error in middleware:", err.message);
+    return res.status(500).json({
+      success: false,
+      message: `Database connection failed: ${err.message}. Please check MongoDB Atlas Network Access (0.0.0.0/0) and Vercel Environment Variables.`,
+    });
   }
-  next();
 });
 
 // HTTP request logger (only in development)
