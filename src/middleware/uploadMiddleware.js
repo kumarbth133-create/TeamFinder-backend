@@ -1,26 +1,8 @@
 const multer = require("multer");
 const path = require("path");
-const fs = require("fs");
 
-// Ensure upload directory exists
-const uploadDir = path.join(__dirname, "../uploads/profiles");
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
-
-// Configure storage
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, uploadDir);
-  },
-  filename: function (req, file, cb) {
-    // Unique filename: userId-timestamp.ext
-    const uniqueName = `${req.user._id}-${Date.now()}${path.extname(
-      file.originalname
-    )}`;
-    cb(null, uniqueName);
-  },
-});
+// Use memoryStorage so it works seamlessly on serverless (Vercel/AWS) and local environments
+const storage = multer.memoryStorage();
 
 // File type filter - only allow images
 const fileFilter = (req, file, cb) => {

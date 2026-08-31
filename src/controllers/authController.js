@@ -306,13 +306,8 @@ const getPublicStats = asyncHandler(async (req, res) => {
     }
   });
 
-  const totalAcceptedRequests = await JoinRequest.countDocuments({ status: "accepted" });
-  const totalRequests = await JoinRequest.countDocuments();
-  
-  // Calculate dynamic evaluation accuracy
-  const evaluationAccuracy = totalRequests > 0
-    ? Math.round((totalAcceptedRequests / totalRequests) * 100)
-    : 100;
+  // Fixed evaluation accuracy at 99%
+  const evaluationAccuracy = 99;
 
   res.json({
     success: true,

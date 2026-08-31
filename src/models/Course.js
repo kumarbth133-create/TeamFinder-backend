@@ -64,7 +64,16 @@ const courseSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
-
+    playlist: [
+      {
+        lessonNumber: { type: Number, default: 1 },
+        title: { type: String, required: true },
+        duration: { type: String, default: "20 Min" },
+        youtubeEmbedId: { type: String, required: true },
+        youtubeUrl: { type: String },
+        description: { type: String, default: "" },
+      },
+    ],
   },
   {
     timestamps: true,

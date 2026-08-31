@@ -21,7 +21,7 @@ const sampleMentors = [
     availability: "Available Weekends & Evenings",
     linkedinLink: "https://linkedin.com",
     githubLink: "https://github.com",
-    sessionsCompleted: 42,
+    sessionsCompleted: 42, 
   },
   {
     name: "Ankur Gill",

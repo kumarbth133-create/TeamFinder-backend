@@ -1,4 +1,12 @@
 const mongoose = require("mongoose");
+const dns = require("dns");
+
+// Set reliable public DNS servers (Google & Cloudflare) to prevent SRV lookup ECONNREFUSED issues on local ISP networks
+try {
+  dns.setServers(["8.8.8.8", "1.1.1.1", "8.8.4.4"]);
+} catch (e) {
+  // Silent fallback in restricted environments
+}
 
 let cached = global.mongoose;
 
@@ -49,7 +57,7 @@ const connectDB = async () => {
 
     const opts = {
       bufferCommands: false,
-      serverSelectionTimeoutMS: 8000,
+      serverSelectionTimeoutMS: 10000,
     };
 
     cached.promise = mongoose.connect(uri, opts).then(async (mongooseInstance) => {

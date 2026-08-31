@@ -159,41 +159,81 @@ const uploadProfilePicture = asyncHandler(async (req, res) => {
   }
 
   const user = await User.findById(req.user._id);
-
-  // Delete old profile picture if it exists locally
-  if (user.profilePicture && user.profilePicture.startsWith("/uploads")) {
-    const oldPicPath = path.join(
-      __dirname,
-      "../uploads/profiles",
-      path.basename(user.profilePicture)
-    );
-    try {
-      if (fs.existsSync(oldPicPath)) {
-        fs.unlinkSync(oldPicPath);
-      }
-    } catch { /* silent */ }
+  if (!user) {
+    res.status(404);
+    throw new Error("User not found");
   }
 
-  // Save new picture path
-  user.profilePicture = `/uploads/profiles/${req.file.filename}`;
-  const updatedUser = await user.save();
+  const cloudName = process.env.CLOUDINARY_CLOUD_NAME || process.env.CLOUDINARY_API_NAME;
 
-  res.json({
-    success: true,
-    message: "Profile picture updated successfully",
-    data: {
-      _id: updatedUser._id,
-      name: updatedUser.name,
-      email: updatedUser.email,
-      role: updatedUser.role,
-      college: updatedUser.college,
-      profilePicture: updatedUser.profilePicture,
-      bio: updatedUser.bio,
-      skills: updatedUser.skills,
-      githubLink: updatedUser.githubLink,
-      linkedinLink: updatedUser.linkedinLink,
-    },
-  });
+  if (
+    !cloudName ||
+    !process.env.CLOUDINARY_API_KEY ||
+    !process.env.CLOUDINARY_API_SECRET
+  ) {
+    res.status(500);
+    throw new Error("Cloudinary credentials are not configured in backend .env");
+  }
+
+  const cloudinary = require("../config/cloudinary");
+
+  // Upload memory buffer directly to Cloudinary using upload_stream
+  const uploadToCloudinary = (buffer) => {
+    return new Promise((resolve, reject) => {
+      const uploadStream = cloudinary.uploader.upload_stream(
+        {
+          folder: "teamup/profiles",
+          transformation: [
+            { width: 400, height: 400, crop: "fill", gravity: "face" },
+            { quality: "auto", fetch_format: "auto" },
+          ],
+        },
+        (error, result) => {
+          if (error) return reject(error);
+          resolve(result);
+        }
+      );
+      uploadStream.end(buffer);
+    });
+  };
+
+  try {
+    const result = await uploadToCloudinary(req.file.buffer);
+    user.profilePicture = result.secure_url;
+    const updatedUser = await user.save();
+
+    // If mentor, sync with Mentor collection
+    if (updatedUser.role === "mentor") {
+      try {
+        const Mentor = require("../models/Mentor");
+        await Mentor.findOneAndUpdate(
+          { email: updatedUser.email },
+          { profilePicture: updatedUser.profilePicture }
+        );
+      } catch { /* silent */ }
+    }
+
+    res.json({
+      success: true,
+      message: "Profile picture uploaded successfully! 🎉",
+      data: {
+        _id: updatedUser._id,
+        name: updatedUser.name,
+        email: updatedUser.email,
+        role: updatedUser.role,
+        college: updatedUser.college,
+        profilePicture: updatedUser.profilePicture,
+        bio: updatedUser.bio,
+        skills: updatedUser.skills,
+        githubLink: updatedUser.githubLink,
+        linkedinLink: updatedUser.linkedinLink,
+      },
+    });
+  } catch (cloudErr) {
+    console.error("Cloudinary upload error:", cloudErr);
+    res.status(500);
+    throw new Error(`Cloudinary upload failed: ${cloudErr.message || cloudErr}`);
+  }
 });
 
 module.exports = {
