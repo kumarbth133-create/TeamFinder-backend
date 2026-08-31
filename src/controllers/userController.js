@@ -165,75 +165,78 @@ const uploadProfilePicture = asyncHandler(async (req, res) => {
   }
 
   const cloudName = process.env.CLOUDINARY_CLOUD_NAME || process.env.CLOUDINARY_API_NAME;
+  let finalPictureUrl = "";
 
+  // 1. Try uploading to Cloudinary if credentials are configured
   if (
-    !cloudName ||
-    !process.env.CLOUDINARY_API_KEY ||
-    !process.env.CLOUDINARY_API_SECRET
+    cloudName &&
+    process.env.CLOUDINARY_API_KEY &&
+    process.env.CLOUDINARY_API_SECRET
   ) {
-    res.status(500);
-    throw new Error("Cloudinary credentials are not configured in backend .env");
-  }
+    try {
+      const cloudinary = require("../config/cloudinary");
+      const uploadToCloudinary = (buffer) => {
+        return new Promise((resolve, reject) => {
+          const uploadStream = cloudinary.uploader.upload_stream(
+            {
+              folder: "teamup/profiles",
+              transformation: [
+                { width: 400, height: 400, crop: "fill", gravity: "face" },
+                { quality: "auto", fetch_format: "auto" },
+              ],
+            },
+            (error, result) => {
+              if (error) return reject(error);
+              resolve(result);
+            }
+          );
+          uploadStream.end(buffer);
+        });
+      };
 
-  const cloudinary = require("../config/cloudinary");
-
-  // Upload memory buffer directly to Cloudinary using upload_stream
-  const uploadToCloudinary = (buffer) => {
-    return new Promise((resolve, reject) => {
-      const uploadStream = cloudinary.uploader.upload_stream(
-        {
-          folder: "teamup/profiles",
-          transformation: [
-            { width: 400, height: 400, crop: "fill", gravity: "face" },
-            { quality: "auto", fetch_format: "auto" },
-          ],
-        },
-        (error, result) => {
-          if (error) return reject(error);
-          resolve(result);
-        }
-      );
-      uploadStream.end(buffer);
-    });
-  };
-
-  try {
-    const result = await uploadToCloudinary(req.file.buffer);
-    user.profilePicture = result.secure_url;
-    const updatedUser = await user.save();
-
-    // If mentor, sync with Mentor collection
-    if (updatedUser.role === "mentor") {
-      try {
-        const Mentor = require("../models/Mentor");
-        await Mentor.findOneAndUpdate(
-          { email: updatedUser.email },
-          { profilePicture: updatedUser.profilePicture }
-        );
-      } catch { /* silent */ }
+      const result = await uploadToCloudinary(req.file.buffer);
+      finalPictureUrl = result.secure_url;
+    } catch (cloudErr) {
+      console.warn("Cloudinary upload failed, falling back to base64:", cloudErr.message);
     }
-
-    res.json({
-      success: true,
-      message: "Profile picture uploaded successfully! 🎉",
-      data: {
-        _id: updatedUser._id,
-        name: updatedUser.name,
-        email: updatedUser.email,
-        role: updatedUser.role,
-        college: updatedUser.college,
-        profilePicture: updatedUser.profilePicture,
-        bio: updatedUser.bio,
-        skills: updatedUser.skills,
-        githubLink: updatedUser.githubLink,
-        linkedinLink: updatedUser.linkedinLink,
-      },
-    });
-  } catch (cloudErr) {
-    console.error("Cloudinary upload error:", cloudErr);
-    res.status(500);
-    throw new Error(`Cloudinary upload failed: ${cloudErr.message || cloudErr}`);
   }
+
+  // 2. Safe Fallback: If Cloudinary keys are not yet set in Vercel, use Base64 Data URI
+  if (!finalPictureUrl) {
+    const mimeType = req.file.mimetype || "image/jpeg";
+    finalPictureUrl = `data:${mimeType};base64,${req.file.buffer.toString("base64")}`;
+  }
+
+  user.profilePicture = finalPictureUrl;
+  const updatedUser = await user.save();
+
+  // If mentor, sync with Mentor collection
+  if (updatedUser.role === "mentor") {
+    try {
+      const Mentor = require("../models/Mentor");
+      await Mentor.findOneAndUpdate(
+        { email: updatedUser.email },
+        { profilePicture: updatedUser.profilePicture }
+      );
+    } catch { /* silent */ }
+  }
+
+  res.json({
+    success: true,
+    message: "Profile picture uploaded successfully! 🎉",
+    data: {
+      _id: updatedUser._id,
+      name: updatedUser.name,
+      email: updatedUser.email,
+      role: updatedUser.role,
+      college: updatedUser.college,
+      profilePicture: updatedUser.profilePicture,
+      bio: updatedUser.bio,
+      skills: updatedUser.skills,
+      githubLink: updatedUser.githubLink,
+      linkedinLink: updatedUser.linkedinLink,
+    },
+  });
 });
 
 module.exports = {
